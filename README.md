@@ -5,6 +5,7 @@ Forked from https://github.com/acrcloud/webapi_example, creating a stable PHP cl
 
 ## Modules
 php-pecl-id3: https://pecl.php.net/package/id3
+
 php-pecl-id3 build help: https://stackoverflow.com/questions/21103962/installing-pecl-id3-extension-on-ubuntu (with zend_function_entry id3_functions)
 
 ## Additional Programs
@@ -12,11 +13,14 @@ bulk-remove ID3 tags before processing: https://www.ghacks.net/2008/12/21/id3-ta
 
 ## Files
 ACRCloud.php
+
 automp3-with-acrquery.php
 
 ## Folders
 /keep
+
 /partial
+
 /unknown
 
 # Assemble List
