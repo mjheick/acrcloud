@@ -4,6 +4,8 @@ $debug = true;
 $rate_limit_sleep = 1;
 $basedir = '/home/matt/ACRCloud/auto';
 $tmpdir = '/tmp';
+$ffmpeg_exec = '/usr/bin/ffmpeg';
+$ffprobe_exec = '/usr/bin/ffprobe';
 
 /**
  * This script does the following:
@@ -31,7 +33,6 @@ if (!is_readable($argv[1]))
 {
 	die('I cannot use "' . $argv[1] . '" for some reason' . "\n");
 }
-sleep($rate_limit_sleep); // cause qps
 $parameter_filename = $argv[1]; if ($debug) { echo "=> param=${parameter_filename}\n"; }
 $basename = basename($parameter_filename); // just the filename
 
@@ -42,13 +43,28 @@ $file_sha1 = hash('sha1', file_get_contents($parameter_filename)); if ($debug) {
 rename($parameter_filename, $tmpdir . '/' . $file_sha1 . '.mp3'); if ($debug) { echo "=> move ${parameter_filename} to " . $tmpdir . '/' . $file_sha1 . '.mp3' . "\n"; }
 file_put_contents($tmpdir . '/' . $file_sha1 . '.filename', $parameter_filename); // save the oroginal data, just in case
 
-//--- STEP 4: FFMPEG, make us two files of 10 seconds long
+//--- STEP 4: ffprobe and ffmpeg, so we can make 2 distinct audio files at 33% and 66% length
+$ffprobe_data = array();
+if ($debug) { echo "=> ffprobe starting\n"; }
+exec($ffprobe_exec . ' -v quiet -print_format json -show_streams ' . $tmpdir . '/' . $file_sha1 . '.mp3', $ffprobe_data);
+$ffprobe_json = json_decode(implode('', $ffprobe_data), true);
+$length_of_sample = intval($ffprobe_json['streams'][0]['duration']);
+$los_33 = intval($length_of_sample * 0.3);
+$los_66 = intval($length_of_sample * 0.6);
+$sample_len = 20;
+if ($length_of_sample < 60)
+{
+	$sample_len = intval($los_33/2);
+}
+
+if ($debug) { echo "=> sample length: ${length_of_sample}s, 33%=${los_33}, 66%=${los_66}, length=${sample_len}\n"; }
+
 // 10 seconds in for 20 seconds
 if ($debug) { echo "=> ffmpeg starting\n"; }
-exec('ffmpeg -y -i ' . $tmpdir . '/' . $file_sha1 . '.mp3' . ' -ac 1 -ar 8000 -ss 00:00:10 -t 00:00:20 ' . $tmpdir . '/' . $file_sha1 . '.1.mp3' . '> /dev/null 2>&1');
+exec($ffmpeg_exec . ' -y -i ' . $tmpdir . '/' . $file_sha1 . '.mp3' . ' -ac 1 -ar 8000 -ss ' . $los_33. ' -t ' . $sample_len. ' ' . $tmpdir . '/' . $file_sha1 . '.1.mp3' . '> /dev/null 2>&1');
 // 40 seconds in for 20 seconds
 if ($debug) { echo "=> ffmpeg starting\n"; }
-exec('ffmpeg -y -i ' . $tmpdir . '/' . $file_sha1 . '.mp3' . ' -ac 1 -ar 8000 -ss 00:00:40 -t 00:00:20 ' . $tmpdir . '/' . $file_sha1 . '.2.mp3' . '> /dev/null 2>&1');
+exec($ffmpeg_exec . ' -y -i ' . $tmpdir . '/' . $file_sha1 . '.mp3' . ' -ac 1 -ar 8000 -ss ' . $los_33. ' -t ' . $sample_len. ' ' . $tmpdir . '/' . $file_sha1 . '.2.mp3' . '> /dev/null 2>&1');
 
 //--- STEP 5: Submit!
 if ($debug) { echo "=> ACRCloud(1)\n"; }

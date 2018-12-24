@@ -53,14 +53,6 @@ class ACRCloud
 		curl_setopt($ch, CURLOPT_POSTFIELDS, $post_fields);
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
 		$result = curl_exec($ch);
-		//echo $result;
-		//$response = curl_exec($ch);
-		//if ($response == true) {
-		//    $info = curl_getinfo($ch);
-		//} else {
-		//    $errmsg = curl_error($ch);
-		//    print $errmsg;
-		//}
 		curl_close($ch);
 		return $result;
 	}
