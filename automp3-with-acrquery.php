@@ -88,8 +88,6 @@ if ($data_1['status'] == false || $data_2['status'] == false)
 		if ($debug) { echo "=> moving ${basename} to unknown\n"; }
 		// move file to unknown/sha1_filename
 		rename($tmpdir . '/' . $file_sha1 . '.mp3', $basedir . '/unknown/' . $file_sha1 . '_' . $basename);
-		// write some debugging info in there
-		file_put_contents($basedir . '/unknown/' . $file_sha1 . '_data', $json_1 . "\n" . $json_2 . "\n" . var_export($data_1, true) . "\n" . var_export($data_2, true));
 	}
 	else // over quota, rate limited, etc. restore original file for attempt again
 	{
@@ -99,8 +97,18 @@ if ($data_1['status'] == false || $data_2['status'] == false)
 }
 else
 {
+	$partial = false;
 	// lets see if we have a "partial scenario", where only the hashs don't work out
 	if ($data_1['hash'] != $data_2['hash'])
+	{
+		// hashes don't match, but sometimes the artists and song titles match and the rest of the data doesn't.
+		// in that case, we allow and trust $data1
+		if (!((strtolower($data_1['artist']) == strtolower($data_2['artist'])) && (strtolower($data_1['title']) == strtolower($data_2['title']))))
+		{
+			$partial = true;
+		}
+	}
+	if ($partial)
 	{
 		if ($debug) { echo "=> moving ${basename} to partial\n"; }
 		// move file to partial/sha1_filename
@@ -111,12 +119,19 @@ else
 	else
 	{
 		if ($debug) { echo "=> moving ${basename} to keep\n"; }
-		$folder_root = $basedir . '/keep/' . strtolower(substr($data_1['artist'], 0, 1)) . '/' . $data_1['artist'];
-		$new_filename = $data_1['artist'] . '_' . $data_1['album'] . '_' . $data_1['title'] . '_' . strtolower(substr($file_sha1, 0, 7)) . '.mp3';
-		foreach (array('/', ':', '~', '`', '$', "\\", '&', '*', '|', '<', '>', '?') as $replacement)
+		$artist_name = $data_1['artist'];
+		$artist_sort = strtolower(substr($artist_name, 0, 1));
+		if (preg_match('/[a-z0-9]/', $artist_sort) === 0)
+		{
+			$artist_sort = '_';
+		}
+		$new_filename = $artist_name . '_' . $data_1['title'] . '_' . strtolower(substr($file_sha1, 0, 7)) . '.mp3';
+		foreach (array("\\", '/', '*', '?', '"', '<', '>', '|') as $replacement)
 		{
 			$new_filename = str_replace($replacement, '_', $new_filename);
+			$artist_name = str_replace($replacement, '_', $artist_name);
 		}
+		$folder_root = $basedir . '/keep/' . $artist_sort . '/' . $artist_name;
 		if ($debug) { echo "=> root folder '${folder_root}'\n"; }
 		if ($debug) { echo "=> naming this '${new_filename}'\n"; }
 		if ($debug) { echo "=> Setting ID3v1 Tag\n"; }
@@ -133,7 +148,6 @@ else
 	}
 }
 
-//rename($tmpdir . '/' . $file_sha1 . '.mp3', $parameter_filename); // move it back
 unlink($tmpdir . '/' . $file_sha1 . '.filename');
 unlink($tmpdir . '/' . $file_sha1 . '.1.mp3');
 unlink($tmpdir . '/' . $file_sha1 . '.2.mp3');
