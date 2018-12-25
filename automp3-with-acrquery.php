@@ -126,7 +126,7 @@ else
 			$artist_sort = '_';
 		}
 		$new_filename = $artist_name . '_' . $data_1['title'] . '_' . strtolower(substr($file_sha1, 0, 7)) . '.mp3';
-		foreach (array("\\", '/', '*', '?', '"', '<', '>', '|') as $replacement)
+		foreach (array("\\", '/', '*', '?', '"', '<', '>', '|', ':') as $replacement)
 		{
 			$new_filename = str_replace($replacement, '_', $new_filename);
 			$artist_name = str_replace($replacement, '_', $artist_name);
